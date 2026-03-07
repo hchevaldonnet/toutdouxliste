@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -97,11 +98,20 @@ fun AppNavigation(taskDao : TaskDao) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "home") {
+
         composable("home") {
-            HomeScreen(navController = navController, taskDao)
+            HomeScreen(navController, taskDao)
         }
+
         composable("new") {
-            NewScreen(navController = navController, taskDao)
+            NewScreen(navController, taskDao, null)
+        }
+
+        composable("edit/{taskId}") { backStackEntry ->
+
+            val taskId = backStackEntry.arguments?.getString("taskId")!!.toInt()
+
+            NewScreen(navController, taskDao, taskId)
         }
     }
 
@@ -109,21 +119,38 @@ fun AppNavigation(taskDao : TaskDao) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewScreen(navController: NavHostController, taskDao: TaskDao) {
+fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) {
+
+    val scope = rememberCoroutineScope()
 
     var titre by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var etat by remember { mutableStateOf(Etat.A_FAIRE) }
 
-    val datePickerState = rememberDatePickerState(
-        initialDisplayMode = DisplayMode.Picker
-    )
+    val datePickerState = rememberDatePickerState()
 
-    val scope = rememberCoroutineScope()
+    LaunchedEffect(taskId) {
+
+        if (taskId != null) {
+
+            val task = taskDao.getTaskById(taskId)
+
+            titre = task.titre
+            description = task.description
+            etat = task.etat
+
+            datePickerState.selectedDateMillis =
+                task.dateLimite
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nouvelle tâche") }
+                title = { Text(if (taskId == null) "Nouvelle tâche" else "Modifier la tâche") }
             )
         }
     ) { padding ->
@@ -174,14 +201,20 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao) {
                         )
 
                         val task = Task(
+                            id = taskId ?: 0,
                             titre = titre,
                             description = description,
-                            etat = Etat.A_FAIRE,
+                            etat = etat,
                             dateLimite = dateLimite
                         )
 
                         scope.launch {
-                            taskDao.insert(task)
+
+                            if (taskId == null) {
+                                taskDao.insert(task)
+                            } else {
+                                taskDao.update(task)
+                            }
                         }
 
                         navController.popBackStack()
@@ -189,7 +222,7 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao) {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Créer la tâche")
+                Text(if (taskId == null) "Créer la tâche" else "Modifier la tâche")
             }
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -227,6 +260,9 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
+                        .clickable {
+                            navController.navigate("edit/${task.id}")
+                        }
                 ) {
 
                     Column(
