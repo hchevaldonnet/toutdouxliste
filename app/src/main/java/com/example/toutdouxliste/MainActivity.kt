@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,6 +56,8 @@ import com.example.toutdouxliste.data.TaskDatabase
 import com.example.toutdouxliste.data.Task
 import com.example.toutdouxliste.data.Etat
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import java.time.LocalDateTime
 
 class MainActivity : ComponentActivity() {
@@ -265,24 +268,43 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                         }
                 ) {
 
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
 
-                        Text(
-                            text = task.titre,
-                            style = MaterialTheme.typography.titleLarge
+                        Checkbox(
+                            checked = task.etat == Etat.REALISE,
+                            onCheckedChange = { checked ->
+
+                                val updatedTask = task.copy(
+                                    etat = if (checked) Etat.REALISE else Etat.A_FAIRE
+                                )
+
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    taskDao.update(updatedTask)
+                                }
+                            }
                         )
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                        Text(task.description)
+                        Column {
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = task.titre,
+                                style = MaterialTheme.typography.titleMedium
+                            )
 
-                        Text("Etat : ${task.etat}")
+                            Text(task.description)
 
-                        Text("Date limite : ${task.dateLimite}")
+                            Text("Date limite : ${task.dateLimite}")
+
+                            Text("Etat : ${task.etat}")
+                        }
                     }
                 }
             }
