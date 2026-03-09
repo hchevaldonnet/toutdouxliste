@@ -30,8 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,6 +50,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.toutdouxliste.data.Etat
 import com.example.toutdouxliste.data.Task
 import com.example.toutdouxliste.data.TaskDao
@@ -56,9 +61,11 @@ import com.example.toutdouxliste.ui.theme.ToutDouxListeTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
@@ -131,6 +138,10 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
     var etat by remember { mutableStateOf(Etat.A_FAIRE) }
 
     val datePickerState = rememberDatePickerState()
+    val timePickerState = rememberTimePickerState(
+        initialHour = 12,
+        initialMinute = 0
+    )
 
     LaunchedEffect(taskId) {
 
@@ -191,6 +202,15 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
                 state = datePickerState
             )
 
+            Text(
+                text = "Heure limite",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            TimePicker(
+                state = timePickerState
+            )
+
             Button(
                 onClick = {
 
@@ -198,9 +218,16 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
 
                     if (selectedDate != null) {
 
-                        val dateLimite = LocalDateTime.ofInstant(
-                            Instant.ofEpochMilli(selectedDate),
-                            ZoneId.systemDefault()
+                        val localDate = Instant.ofEpochMilli(selectedDate)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+
+                        val dateLimite = LocalDateTime.of(
+                            localDate.year,
+                            localDate.month,
+                            localDate.dayOfMonth,
+                            timePickerState.hour,
+                            timePickerState.minute
                         )
 
                         val task = Task(
@@ -219,6 +246,23 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
                                 taskDao.update(task)
                             }
                         }
+
+                        val delay =
+                            Duration.between(LocalDateTime.now(), dateLimite).toMillis()
+
+                        val data = workDataOf(
+                            "titre" to titre,
+                            "description" to description
+                        )
+
+                        val request =
+                            OneTimeWorkRequestBuilder<TaskNotificationWorker>()
+                                .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                                .setInputData(data)
+                                .build()
+
+                        WorkManager.getInstance(navController.context)
+                            .enqueue(request)
 
                         navController.popBackStack()
                     }
@@ -292,11 +336,23 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                 }
             }
 
-            val filteredTasks = if (filtreEtat == null) {
-                tasks
-            } else {
-                tasks.filter { it.etat == filtreEtat }
+            val tasksWithRealState = tasks.map { task ->
+
+                if (
+                    task.etat != Etat.REALISE && task.dateLimite.isBefore(LocalDateTime.now())
+                ) {
+                    task.copy(etat = Etat.EN_RETARD)
+                } else {
+                    task
+                }
             }
+
+            val filteredTasks =
+                if (filtreEtat == null) {
+                    tasksWithRealState
+                } else {
+                    tasksWithRealState.filter { it.etat == filtreEtat }
+                }
 
             LazyColumn(
                 modifier = Modifier
@@ -306,6 +362,13 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
             ) {
 
                 items(filteredTasks) { task ->
+
+                    val etatAffiche =
+                        if (task.etat != Etat.REALISE && task.dateLimite.isBefore(LocalDateTime.now())) {
+                            Etat.EN_RETARD
+                        } else {
+                            task.etat
+                        }
 
                     Card(
                         modifier = Modifier
@@ -325,7 +388,7 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                         ) {
 
                             Checkbox(
-                                checked = task.etat == Etat.REALISE,
+                                checked = etatAffiche == Etat.REALISE,
                                 onCheckedChange = { checked ->
 
                                     val updatedTask = task.copy(
