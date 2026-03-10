@@ -64,4 +64,5 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.konfetti.compose.v204)
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
 }

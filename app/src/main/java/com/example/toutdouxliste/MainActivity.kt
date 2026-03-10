@@ -27,6 +27,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -73,6 +75,8 @@ import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
 import nl.dionsegijn.konfetti.core.models.Size
 import nl.dionsegijn.konfetti.core.models.Shape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 
 class MainActivity : ComponentActivity() {
 
@@ -415,7 +419,8 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                                     .fillMaxWidth()
                                     .padding(16.dp),
 
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                //horizontalArrangement = Arrangement.SpaceBetween
                             ) {
 
                                 Checkbox(
@@ -438,7 +443,9 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
 
                                 Spacer(modifier = Modifier.width(12.dp))
 
-                                Column {
+                                Column (
+                                    modifier = Modifier.weight(1f)
+                                ) {
 
                                     Text(
                                         text = task.titre,
@@ -450,6 +457,19 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                                     Text("Date limite : ${task.dateLimite}")
 
                                     Text("Etat : $etatAffiche")
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            taskDao.delete(task)
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Supprimer la tâche"
+                                    )
                                 }
                             }
                         }
