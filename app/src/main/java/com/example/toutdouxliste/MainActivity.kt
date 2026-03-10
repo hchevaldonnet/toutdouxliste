@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -66,6 +67,12 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
+import nl.dionsegijn.konfetti.compose.KonfettiView
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
+import nl.dionsegijn.konfetti.core.models.Size
+import nl.dionsegijn.konfetti.core.models.Shape
 
 class MainActivity : ComponentActivity() {
 
@@ -283,7 +290,14 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
     val tasks by taskDao.getAllTasks().collectAsState(initial = emptyList())
     var filtreEtat by remember { mutableStateOf<Etat?>(null) }
 
+    var showConfetti by remember { mutableStateOf(false) }
 
+    LaunchedEffect(showConfetti) {
+        if (showConfetti) {
+            kotlinx.coroutines.delay(2000)
+            showConfetti = false
+        }
+    }
 
     Scaffold(
 
@@ -297,128 +311,166 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
 
     ) { padding ->
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
 
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp)
+            Column(
+                modifier = Modifier.fillMaxSize()
             ) {
 
-                item {
-                    Button(onClick = { filtreEtat = null }) {
-                        Text("Toutes")
-                    }
-                }
+                /*if (showConfetti) {
+                    val party: Party = Party(
+                        emitter = Emitter(duration = 5, TimeUnit.SECONDS).perSecond(30)
+                    )
 
-                item {
-                    Button(onClick = { filtreEtat = Etat.A_FAIRE }) {
-                        Text("À faire")
-                    }
-                }
+                    val listParty: List<Party> = listOf(party)
 
-                item {
-                    Button(onClick = { filtreEtat = Etat.EN_RETARD }) {
-                        Text("En retard")
-                    }
-                }
+                    KonfettiView(
+                        modifier = Modifier.fillMaxSize(),
+                        parties = listParty
+                    )
+                }*/
 
-                item {
-                    Button(onClick = { filtreEtat = Etat.REALISE }) {
-                        Text("Réalisées")
-                    }
-                }
-            }
-
-            val tasksWithRealState = tasks.map { task ->
-
-                if (
-                    task.etat != Etat.REALISE && task.dateLimite.isBefore(LocalDateTime.now())
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
-                    task.copy(etat = Etat.EN_RETARD)
-                } else {
-                    task
-                }
-            }
 
-            val filteredTasks =
-                if (filtreEtat == null) {
-                    tasksWithRealState
-                } else {
-                    tasksWithRealState.filter { it.etat == filtreEtat }
-                }
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp)
-            ) {
-
-                items(filteredTasks) { task ->
-
-                    val etatAffiche =
-                        if (task.etat != Etat.REALISE && task.dateLimite.isBefore(LocalDateTime.now())) {
-                            Etat.EN_RETARD
-                        } else {
-                            task.etat
+                    item {
+                        Button(onClick = { filtreEtat = null }) {
+                            Text("Toutes")
                         }
+                    }
 
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                            .clickable {
-                                navController.navigate("edit/${task.id}")
-                            }
+                    item {
+                        Button(onClick = { filtreEtat = Etat.A_FAIRE }) {
+                            Text("À faire")
+                        }
+                    }
+
+                    item {
+                        Button(onClick = { filtreEtat = Etat.EN_RETARD }) {
+                            Text("En retard")
+                        }
+                    }
+
+                    item {
+                        Button(onClick = { filtreEtat = Etat.REALISE }) {
+                            Text("Réalisées")
+                        }
+                    }
+                }
+
+                val tasksWithRealState = tasks.map { task ->
+
+                    if (
+                        task.etat != Etat.REALISE && task.dateLimite.isBefore(LocalDateTime.now())
                     ) {
+                        task.copy(etat = Etat.EN_RETARD)
+                    } else {
+                        task
+                    }
+                }
 
-                        Row(
+                val filteredTasks =
+                    if (filtreEtat == null) {
+                        tasksWithRealState
+                    } else {
+                        tasksWithRealState.filter { it.etat == filtreEtat }
+                    }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp)
+                ) {
+
+                    items(filteredTasks) { task ->
+
+                        val etatAffiche =
+                            if (task.etat != Etat.REALISE && task.dateLimite.isBefore(LocalDateTime.now())) {
+                                Etat.EN_RETARD
+                            } else {
+                                task.etat
+                            }
+
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(vertical = 8.dp)
+                                .clickable {
+                                    navController.navigate("edit/${task.id}")
+                                }
                         ) {
 
-                            Checkbox(
-                                checked = etatAffiche == Etat.REALISE,
-                                onCheckedChange = { checked ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
 
-                                    val updatedTask = task.copy(
-                                        etat = if (checked) Etat.REALISE else Etat.A_FAIRE
-                                    )
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
 
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        taskDao.update(updatedTask)
+                                Checkbox(
+                                    checked = etatAffiche == Etat.REALISE,
+                                    onCheckedChange = { checked ->
+
+                                        val updatedTask = task.copy(
+                                            etat = if (checked) Etat.REALISE else Etat.A_FAIRE
+                                        )
+
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            taskDao.update(updatedTask)
+                                        }
+
+                                        if (checked) {
+                                            showConfetti = true
+                                        }
                                     }
-                                }
-                            )
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column {
-
-                                Text(
-                                    text = task.titre,
-                                    style = MaterialTheme.typography.titleMedium
                                 )
 
-                                Text(task.description)
+                                Spacer(modifier = Modifier.width(12.dp))
 
-                                Text("Date limite : ${task.dateLimite}")
+                                Column {
 
-                                Text("Etat : ${task.etat}")
+                                    Text(
+                                        text = task.titre,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+
+                                    Text(task.description)
+
+                                    Text("Date limite : ${task.dateLimite}")
+
+                                    Text("Etat : $etatAffiche")
+                                }
                             }
                         }
                     }
                 }
+            }
+
+            if (showConfetti) {
+
+                val party = Party(
+                    emitter = Emitter(duration = 2, TimeUnit.SECONDS).perSecond(40),
+                    spread = 360,
+                    position = Position.Relative(0.5, 0.0),
+                    size = listOf(Size.SMALL, Size.MEDIUM),
+                    shapes = listOf(Shape.Circle, Shape.Square)
+                )
+
+                KonfettiView(
+                    modifier = Modifier.fillMaxSize(),
+                    parties = listOf(party)
+                )
             }
         }
     }
