@@ -347,6 +347,13 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
 @Composable
 fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
 
+    val context = navController.context
+    val prefs = context.getSharedPreferences("stats", android.content.Context.MODE_PRIVATE)
+
+    var totalTasksDone by remember {
+        mutableStateOf(prefs.getInt("tasks_done", 0))
+    }
+
     val tasks by taskDao.getAllTasks().collectAsState(initial = emptyList())
     var filtreEtat by remember { mutableStateOf<Etat?>(null) }
 
@@ -380,6 +387,12 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
+
+                Text(
+                    text = "Vous avez accompli $totalTasksDone tâche(s).",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(16.dp)
+                )
 
                 LazyRow(
                     modifier = Modifier
@@ -463,12 +476,13 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                                     .padding(16.dp),
 
                                 verticalAlignment = Alignment.CenterVertically,
-                                //horizontalArrangement = Arrangement.SpaceBetween
                             ) {
 
                                 Checkbox(
                                     checked = etatAffiche == Etat.REALISE,
                                     onCheckedChange = { checked ->
+
+                                        val wasRealised = task.etat == Etat.REALISE
 
                                         val updatedTask = task.copy(
                                             etat = if (checked) Etat.REALISE else Etat.A_FAIRE
@@ -478,8 +492,19 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                                             taskDao.update(updatedTask)
                                         }
 
-                                        if (checked) {
+                                        if (checked && !wasRealised) {
+
                                             showConfetti = true
+
+                                            val newCount = totalTasksDone + 1
+                                            totalTasksDone = newCount
+                                            prefs.edit().putInt("tasks_done", newCount).apply()
+
+                                        } else if (!checked && wasRealised) {
+
+                                            val newCount = (totalTasksDone - 1).coerceAtLeast(0)
+                                            totalTasksDone = newCount
+                                            prefs.edit().putInt("tasks_done", newCount).apply()
                                         }
 
                                         if (checked && task.periodicite != Periodicite.AUCUNE) {
