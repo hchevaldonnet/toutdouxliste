@@ -77,6 +77,7 @@ import nl.dionsegijn.konfetti.core.models.Size
 import nl.dionsegijn.konfetti.core.models.Shape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import com.example.toutdouxliste.data.Periodicite
 
 class MainActivity : ComponentActivity() {
 
@@ -154,6 +155,8 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
         initialMinute = 0
     )
 
+    var periodicite by remember { mutableStateOf(Periodicite.AUCUNE) }
+
     LaunchedEffect(taskId) {
 
         if (taskId != null) {
@@ -222,6 +225,40 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
                 state = timePickerState
             )
 
+            Text(
+                text = "Périodicité",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                item {
+                    Button(onClick = { periodicite = Periodicite.AUCUNE }) {
+                        Text("Aucune")
+                    }
+                }
+
+                item {
+                    Button(onClick = { periodicite = Periodicite.QUOTIDIENNE }) {
+                        Text("Quotidienne")
+                    }
+                }
+
+                item {
+                    Button(onClick = { periodicite = Periodicite.HEBDOMADAIRE }) {
+                        Text("Hebdomadaire")
+                    }
+                }
+
+                item {
+                    Button(onClick = { periodicite = Periodicite.MENSUELLE }) {
+                        Text("Mensuelle")
+                    }
+                }
+            }
+
             Button(
                 onClick = {
 
@@ -246,7 +283,8 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
                             titre = titre,
                             description = description,
                             etat = etat,
-                            dateLimite = dateLimite
+                            dateLimite = dateLimite,
+                            periodicite = periodicite
                         )
 
                         scope.launch {
@@ -324,19 +362,6 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-
-                /*if (showConfetti) {
-                    val party: Party = Party(
-                        emitter = Emitter(duration = 5, TimeUnit.SECONDS).perSecond(30)
-                    )
-
-                    val listParty: List<Party> = listOf(party)
-
-                    KonfettiView(
-                        modifier = Modifier.fillMaxSize(),
-                        parties = listParty
-                    )
-                }*/
 
                 LazyRow(
                     modifier = Modifier
@@ -438,6 +463,33 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                                         if (checked) {
                                             showConfetti = true
                                         }
+
+                                        if (checked && task.periodicite != Periodicite.AUCUNE) {
+
+                                            val nouvelleDate = when(task.periodicite) {
+
+                                                Periodicite.QUOTIDIENNE ->
+                                                    task.dateLimite.plusDays(1)
+
+                                                Periodicite.HEBDOMADAIRE ->
+                                                    task.dateLimite.plusWeeks(1)
+
+                                                Periodicite.MENSUELLE ->
+                                                    task.dateLimite.plusMonths(1)
+
+                                                else -> task.dateLimite
+                                            }
+
+                                            val newTask = task.copy(
+                                                id = 0,
+                                                etat = Etat.A_FAIRE,
+                                                dateLimite = nouvelleDate
+                                            )
+
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                taskDao.insert(newTask)
+                                            }
+                                        }
                                     }
                                 )
 
@@ -457,6 +509,8 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                                     Text("Date limite : ${task.dateLimite}")
 
                                     Text("Etat : $etatAffiche")
+
+                                    Text("Périodicité : ${task.periodicite}")
                                 }
 
                                 IconButton(

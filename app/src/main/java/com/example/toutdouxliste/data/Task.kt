@@ -15,5 +15,7 @@ data class Task(
 
     val etat: Etat,
 
-    val dateLimite: LocalDateTime
+    val dateLimite: LocalDateTime,
+
+    val periodicite: Periodicite = Periodicite.AUCUNE
 )
