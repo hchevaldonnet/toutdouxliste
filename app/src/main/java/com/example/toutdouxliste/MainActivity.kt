@@ -157,6 +157,8 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
 
     var periodicite by remember { mutableStateOf(Periodicite.AUCUNE) }
 
+    var important by remember { mutableStateOf(false) }
+
     LaunchedEffect(taskId) {
 
         if (taskId != null) {
@@ -166,6 +168,7 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
             titre = task.titre
             description = task.description
             etat = task.etat
+            important = task.important
 
             datePickerState.selectedDateMillis =
                 task.dateLimite
@@ -259,6 +262,20 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
                 }
             }
 
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Checkbox(
+                    checked = important,
+                    onCheckedChange = { important = it }
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Text("Tâche importante")
+            }
+
             Button(
                 onClick = {
 
@@ -284,7 +301,8 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
                             description = description,
                             etat = etat,
                             dateLimite = dateLimite,
-                            periodicite = periodicite
+                            periodicite = periodicite,
+                            important = important
                         )
 
                         scope.launch {
@@ -412,7 +430,7 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                         tasksWithRealState
                     } else {
                         tasksWithRealState.filter { it.etat == filtreEtat }
-                    }
+                    }.sortedByDescending { it.important }
 
                 LazyColumn(
                     modifier = Modifier
@@ -511,6 +529,10 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                                     Text("Etat : $etatAffiche")
 
                                     Text("Périodicité : ${task.periodicite}")
+
+                                    if (task.important) {
+                                        Text("⚠ Important")
+                                    }
                                 }
 
                                 IconButton(

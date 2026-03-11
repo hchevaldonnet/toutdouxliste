@@ -17,5 +17,7 @@ data class Task(
 
     val dateLimite: LocalDateTime,
 
-    val periodicite: Periodicite = Periodicite.AUCUNE
+    val periodicite: Periodicite = Periodicite.AUCUNE,
+
+    val important: Boolean = false
 )
