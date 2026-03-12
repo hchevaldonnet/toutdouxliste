@@ -92,6 +92,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.ui.graphics.Color
 import java.io.FileOutputStream
 import java.io.File
+import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
 
@@ -577,6 +578,8 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                         tasksWithRealState.filter { it.etat == filtreEtat }
                     }.sortedByDescending { it.important }
 
+                val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy - HH:mm")
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -681,7 +684,7 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
 
                                     Text(task.description)
 
-                                    Text("Date limite : ${task.dateLimite}")
+                                    Text("Date limite : ${task.dateLimite.format(dateFormatter)}")
 
                                     Text("Etat : $etatAffiche")
 
