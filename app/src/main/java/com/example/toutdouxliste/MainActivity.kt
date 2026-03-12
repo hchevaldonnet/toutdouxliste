@@ -87,6 +87,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.ActivityNavigatorExtras
 import coil.compose.rememberAsyncImagePainter
 import android.content.Context
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.graphics.Color
 import java.io.FileOutputStream
 import java.io.File
 
@@ -126,6 +129,17 @@ fun saveImageToInternalStorage(context: Context, uri: Uri): String {
     outputStream.close()
 
     return file.absolutePath
+}
+
+fun getThemeLevel(tasksDone: Int): Int {
+
+    return when {
+        tasksDone >= 100 -> 4
+        tasksDone >= 50 -> 3
+        tasksDone >= 25 -> 2
+        tasksDone >= 10 -> 1
+        else -> 0
+    }
 }
 
 @Composable
@@ -427,6 +441,16 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
     val tasks by taskDao.getAllTasks().collectAsState(initial = emptyList())
     var filtreEtat by remember { mutableStateOf<Etat?>(null) }
 
+    val themeLevel = getThemeLevel(totalTasksDone)
+
+    val ButtonColor = when(themeLevel) {
+        1 -> Color(0xFFB2FF59)
+        2 -> Color(0xFFD1C4E9)
+        3 -> Color(0xFFFFD54F)
+        4 -> Color(0xFF90CAF9)
+        else -> MaterialTheme.colorScheme.surface
+    }
+
     var showConfetti by remember { mutableStateOf(false) }
 
     LaunchedEffect(showConfetti) {
@@ -440,7 +464,8 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
 
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate("new") }
+                onClick = { navController.navigate("new") },
+                containerColor = ButtonColor
             ) {
                 Text("+")
             }
@@ -464,6 +489,31 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                     modifier = Modifier.padding(16.dp)
                 )
 
+                Text(
+                    text = when(themeLevel) {
+                        4 -> "Thème Diamant débloqué"
+                        3 -> "Thème Doré débloqué"
+                        2 -> "Thème Améthyste débloqué"
+                        1 -> "Thème Émeraude débloqué"
+                        else -> "Continuez pour débloquer des apparences !"
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(16.dp)
+                )
+
+                Button(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    onClick = {
+                        totalTasksDone = 0
+                        prefs.edit().putInt("tasks_done",0).apply()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ButtonColor
+                    )
+                ) {
+                    Text("Réinitialiser les statistiques")
+                }
+
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -473,25 +523,37 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                 ) {
 
                     item {
-                        Button(onClick = { filtreEtat = null }) {
+                        Button(onClick = { filtreEtat = null },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ButtonColor
+                            )) {
                             Text("Toutes")
                         }
                     }
 
                     item {
-                        Button(onClick = { filtreEtat = Etat.A_FAIRE }) {
+                        Button(onClick = { filtreEtat = Etat.A_FAIRE },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ButtonColor
+                            )) {
                             Text("À faire")
                         }
                     }
 
                     item {
-                        Button(onClick = { filtreEtat = Etat.EN_RETARD }) {
+                        Button(onClick = { filtreEtat = Etat.EN_RETARD },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ButtonColor
+                            )) {
                             Text("En retard")
                         }
                     }
 
                     item {
-                        Button(onClick = { filtreEtat = Etat.REALISE }) {
+                        Button(onClick = { filtreEtat = Etat.REALISE },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ButtonColor
+                            )) {
                             Text("Réalisées")
                         }
                     }
