@@ -486,7 +486,7 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
 
                 Text(
                     text = "Vous avez accompli $totalTasksDone tâche(s).",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(16.dp)
                 )
 
@@ -498,7 +498,7 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                         1 -> "Thème Émeraude débloqué"
                         else -> "Continuez pour débloquer des apparences !"
                     },
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(16.dp)
                 )
 
