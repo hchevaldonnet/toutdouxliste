@@ -78,6 +78,17 @@ import nl.dionsegijn.konfetti.core.models.Shape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import com.example.toutdouxliste.data.Periodicite
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.ActivityNavigatorExtras
+import coil.compose.rememberAsyncImagePainter
+import android.content.Context
+import java.io.FileOutputStream
+import java.io.File
 
 class MainActivity : ComponentActivity() {
 
@@ -97,6 +108,24 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+fun saveImageToInternalStorage(context: Context, uri: Uri): String {
+
+    val inputStream = context.contentResolver.openInputStream(uri)
+
+    val fileName = "task_${System.currentTimeMillis()}.jpg"
+
+    val file = File(context.filesDir, fileName)
+
+    val outputStream = FileOutputStream(file)
+
+    inputStream?.copyTo(outputStream)
+
+    inputStream?.close()
+    outputStream.close()
+
+    return file.absolutePath
 }
 
 @Composable
@@ -159,6 +188,20 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
 
     var important by remember { mutableStateOf(false) }
 
+    var imageDesc by remember { mutableStateOf<Uri?>(null) }
+    var imagePath by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
+        uri -> if (uri != null) {
+            val savedPath = saveImageToInternalStorage(context, uri)
+
+            imageDesc = Uri.fromFile(File(savedPath))
+            imagePath = savedPath
+    }
+    }
+
     LaunchedEffect(taskId) {
 
         if (taskId != null) {
@@ -169,12 +212,21 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
             description = task.description
             etat = task.etat
             important = task.important
+            periodicite = task.periodicite
+            imagePath = task.imageDesc
+
+            if (task.imageDesc != null) {
+                imageDesc = Uri.fromFile(File(task.imageDesc))
+            }
 
             datePickerState.selectedDateMillis =
                 task.dateLimite
                     .atZone(ZoneId.systemDefault())
                     .toInstant()
                     .toEpochMilli()
+
+            timePickerState.hour = task.dateLimite.hour
+            timePickerState.minute = task.dateLimite.minute
         }
     }
 
@@ -209,6 +261,23 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
                 label = { Text("Description") },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            Button(
+                onClick = { imagePicker.launch("image/*") }
+            ) {
+                Text("Ajouter une photo")
+            }
+
+            imageDesc?.let { uri ->
+
+                Image(
+                    painter = rememberAsyncImagePainter(uri),
+                    contentDescription = "Image tâche",
+                    modifier = Modifier.fillMaxWidth()
+                        .height(200.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
             Text(
                 text = "Date limite",
@@ -302,7 +371,8 @@ fun NewScreen(navController: NavHostController, taskDao: TaskDao, taskId: Int?) 
                             etat = etat,
                             dateLimite = dateLimite,
                             periodicite = periodicite,
-                            important = important
+                            important = important,
+                            imageDesc = imagePath
                         )
 
                         scope.launch {
@@ -475,7 +545,7 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
                                     .fillMaxWidth()
                                     .padding(16.dp),
 
-                                verticalAlignment = Alignment.CenterVertically,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
 
                                 Checkbox(
@@ -557,6 +627,15 @@ fun HomeScreen(navController: NavHostController, taskDao: TaskDao) {
 
                                     if (task.important) {
                                         Text("⚠ Important")
+                                    }
+
+                                    task.imageDesc?.let {
+                                        Image(
+                                            painter = rememberAsyncImagePainter(File(it)),
+                                            contentDescription = "Image tâche",
+                                            modifier = Modifier.fillMaxWidth().height(150.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
                                     }
                                 }
 

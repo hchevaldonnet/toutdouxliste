@@ -19,5 +19,7 @@ data class Task(
 
     val periodicite: Periodicite = Periodicite.AUCUNE,
 
-    val important: Boolean = false
+    val important: Boolean = false,
+
+    val imageDesc: String? = null
 )
